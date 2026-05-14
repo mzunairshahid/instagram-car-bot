@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: instagram-car-bot
+    runtime: node
+    buildCommand: npm install
+    startCommand: node bot.js
+    envVars:
+      - key: PEXELS_API_KEY
+        sync: false
+      - key: INSTAGRAM_USER_ID
+        sync: false
+      - key: INSTAGRAM_ACCESS_TOKEN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
