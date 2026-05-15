@@ -13,21 +13,37 @@ function validateConfig() {
   if (missing.length) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 }
 
-async function fetchCarPhoto() {
-  const page = Math.floor(Math.random() * 5) + 1;
+async function fetchUsedImageUrls() {
   const res = await fetch(
-    `https://api.pexels.com/v1/search?query=luxury+sports+car&per_page=80&page=${page}`,
-    { headers: { Authorization: PEXELS_API_KEY } }
+    `${SUPABASE_URL}/rest/v1/posts?select=image_url`,
+    { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
   );
-  const data = await res.json();
-  if (!data.photos?.length) throw new Error('No photos returned from Pexels');
-  const photo = data.photos[Math.floor(Math.random() * data.photos.length)];
-  return {
-    image_url:    photo.src.large2x,
-    photographer: photo.photographer,
-    alt:          photo.alt || 'Beautiful luxury car',
-    photo_id:     String(photo.id)
-  };
+  if (!res.ok) return new Set();
+  const rows = await res.json();
+  return new Set(rows.map(r => r.image_url));
+}
+
+async function fetchCarPhoto() {
+  const used = await fetchUsedImageUrls();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const page = Math.floor(Math.random() * 5) + 1;
+    const res = await fetch(
+      `https://api.pexels.com/v1/search?query=luxury+sports+car&per_page=80&page=${page}`,
+      { headers: { Authorization: PEXELS_API_KEY } }
+    );
+    const data = await res.json();
+    if (!data.photos?.length) continue;
+    const fresh = data.photos.filter(p => !used.has(p.src.large2x));
+    if (!fresh.length) continue;
+    const photo = fresh[Math.floor(Math.random() * fresh.length)];
+    return {
+      image_url:    photo.src.large2x,
+      photographer: photo.photographer,
+      alt:          photo.alt || 'Beautiful luxury car',
+      photo_id:     String(photo.id)
+    };
+  }
+  throw new Error('Could not find a fresh photo after 5 attempts');
 }
 
 function generateCaption({ alt, photographer }) {
